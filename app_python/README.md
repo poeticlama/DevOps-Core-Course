@@ -78,17 +78,17 @@ For detailed testing documentation, see [docs/LAB03-TASK1.md](docs/LAB03-TASK1.m
 ### Build image
 
 ```bash
-docker build -t poeticlama/devops-info-service:1.0 .
+docker build -t poeticlama/devops-info-service:latest .
 ```
 
 ### Run container
 
 ```bash
-docker run -p 8080:8080 poeticlama/devops-info-service:1.0
+docker run -p 8080:8080 poeticlama/devops-info-service:latest
 ```
 
 ### Pull from Docker Hub
 
 ```bash
-docker pull poeticlama/devops-info-service:1.0
+docker pull poeticlama/devops-info-service:latest
 ```
