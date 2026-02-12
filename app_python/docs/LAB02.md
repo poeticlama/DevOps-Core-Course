@@ -126,7 +126,25 @@ This structure improves readability, maintainability, and build performance.
 ### Build Image Output
 
 ```text
-(INSERT FULL docker build OUTPUT HERE)
+[+] Building 2.9s (12/12) FINISHED                                                                                                         docker:desktop-linux
+ => [internal] load build definition from Dockerfile                                                                                                       0.0s
+ => => transferring dockerfile: 409B                                                                                                                       0.0s
+ => [internal] load metadata for docker.io/library/python:3.13-slim                                                                                        2.7s
+ => [internal] load .dockerignore                                                                                                                          0.0s
+ => => transferring context: 156B                                                                                                                          0.0s
+ => [1/7] FROM docker.io/library/python:3.13-slim@sha256:2b9c9803c6a287cafa0a8c917211dddd23dcd2016f049690ee5219f5d3f1636e                                  0.0s
+ => [internal] load build context                                                                                                                          0.0s
+ => => transferring context: 63B                                                                                                                           0.0s
+ => CACHED [2/7] RUN useradd --create-home appuser                                                                                                         0.0s
+ => CACHED [3/7] WORKDIR /app                                                                                                                              0.0s
+ => CACHED [4/7] COPY requirements.txt .                                                                                                                   0.0s
+ => CACHED [5/7] RUN pip install --no-cache-dir -r requirements.txt                                                                                        0.0s
+ => CACHED [6/7] COPY app.py .                                                                                                                             0.0s
+ => CACHED [7/7] RUN chown -R appuser:appuser /app                                                                                                         0.0s
+ => exporting to image                                                                                                                                     0.0s
+ => => exporting layers                                                                                                                                    0.0s
+ => => writing image sha256:960d06965f6e0a4c6c737a274a914e78cb78088134671387299a5e5bcb6033aa                                                               0.0s
+ => => naming to docker.io/library/devops-info-service:1.0                                                                                                 0.0s
 ```
 
 ---
@@ -134,7 +152,17 @@ This structure improves readability, maintainability, and build performance.
 ### Run Container
 
 ```text
-(INSERT docker run OUTPUT HERE)
+INFO:     Started server process [1]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:8080 (Press CTRL+C to quit)
+INFO:     172.17.0.1:53428 - "GET / HTTP/1.1" 200 OK
+INFO:     172.17.0.1:53428 - "GET /favicon.ico HTTP/1.1" 404 Not Found
+INFO:     172.17.0.1:53428 - "GET /_static/out/browser/serviceWorker.js HTTP/1.1" 404 Not Found
+INFO:     172.17.0.1:52206 - "GET / HTTP/1.1" 200 OK
+INFO:     172.17.0.1:52400 - "GET / HTTP/1.1" 200 OK
+INFO:     172.17.0.1:55254 - "GET / HTTP/1.1" 200 OK
+INFO:     172.17.0.1:53262 - "GET / HTTP/1.1" 200 OK
 ```
 
 The container is started with port mapping:
@@ -148,10 +176,33 @@ The container is started with port mapping:
 
 ```bash
 curl http://localhost:8080/
-curl http://localhost:8080/health
+
+
+StatusCode        : 200
+StatusDescription : OK
+Content           : {"service":{"name":"devops-info-service","version":"1.0.0","description":"DevOps course info service","framework":"FastAPI
+                    "},"system":{"hostname":"ed6e3510b184","platform":"Linux","platform_version":"...
+RawContent        : HTTP/1.1 200 OK
+                    Content-Length: 739
+                    Content-Type: application/json
+                    Date: Wed, 04 Feb 2026 09:34:03 GMT
+                    Server: uvicorn
+
+
+
+                    {"service":{"name":"devops-info-service","version":"1.0.0","description":"...
+Forms             : {}
+Headers           : {[Content-Length, 739], [Content-Type, application/json], [Date, Wed, 04 Feb 2026 09:34:03 GMT], [Server, uvicorn]}
+Images            : {}
+InputFields       : {}
+Links             : {}
+ParsedHtml        : mshtml.HTMLDocumentClass
+RawContentLength  : 739
+
+
 ```
 
-Both endpoints return valid JSON responses identical to the locally running application.
+Root endpoint returns valid JSON response identical to the locally running application.
 
 ---
 
@@ -160,7 +211,7 @@ Both endpoints return valid JSON responses identical to the locally running appl
 The image is published to Docker Hub and is publicly accessible:
 
 ```
-https://hub.docker.com/r/<dockerhub_username>/devops-info-service
+https://hub.docker.com/r/poeticlama/devops-info-service
 ```
 
 ---
