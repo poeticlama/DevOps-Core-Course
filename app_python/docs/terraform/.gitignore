@@ -1,0 +1,27 @@
+# Terraform
+*.tfstate
+*.tfstate.*
+.terraform/
+terraform.tfvars
+*.tfvars
+.terraform.lock.hcl
+
+# Vagrant
+.vagrant/
+*.box
+
+# Cloud credentials
+*.pem
+*.key
+*.json
+credentials
+~/.ssh/id_rsa
+~/.ssh/id_rsa.pub
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store

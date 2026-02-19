@@ -1,0 +1,11 @@
+encryptionsalt: v1:xxxxxxxxxxxxx=/
+config:
+  vagrant_box: ubuntu/noble64
+  memory_mb: "2048"
+  cpu_count: "2"
+  vm_hostname: devops-vm
+  vm_private_ip: 192.168.56.10
+  ssh_host_port: "2222"
+  app_port_host: "5000"
+  vm_user: vagrant
+  ssh_public_key_path: ~/.ssh/id_rsa.pub

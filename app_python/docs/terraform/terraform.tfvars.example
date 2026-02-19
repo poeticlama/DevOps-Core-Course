@@ -1,0 +1,21 @@
+# Example terraform.tfvars file
+# Copy this to terraform.tfvars and adjust values as needed
+# This file should be added to .gitignore
+
+vagrant_box             = "ubuntu/noble64"  # Ubuntu 24.04 LTS
+box_version            = ">= 1.0"
+vm_name                = "devops-lab04-vm"
+vm_hostname            = "devops-vm"
+memory_mb              = 2048               # 2 GB
+cpu_count              = 2
+vm_private_ip          = "192.168.56.10"
+vm_netmask             = "255.255.255.0"
+ssh_host_port          = 2222
+app_port_host          = 5000
+vm_user                = "vagrant"
+vagrant_default_password = "vagrant"
+ssh_public_key_path    = "~/.ssh/id_rsa.pub"
+ssh_private_key_path   = "~/.ssh/id_rsa"
+synced_folder_source   = "."
+synced_folder_dest     = "/vagrant"
+environment            = "lab"
