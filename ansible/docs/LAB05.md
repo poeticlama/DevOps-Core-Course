@@ -7,11 +7,11 @@
 | Item | Value |
 |------|-------|
 | **Ansible version** | 2.16+ (core) |
-| **Control node OS** | Windows 11 (via WSL2 / local) |
+| **Control node OS** | Windows 11 (via WSL2) |
 | **Target VM** | Ubuntu 24.04 LTS (noble64) — local Vagrant VM from Lab 4 |
 | **VM IP** | 192.168.56.10 (private network) |
 | **VM user** | `vagrant` |
-| **SSH port** | 22 (or 2222 via port forwarding on localhost) |
+| **SSH port** | 22 (direct via private network) |
 | **Python on target** | 3.12.x (Ubuntu 24.04 default) |
 
 ### Target VM from Lab 4
@@ -23,11 +23,11 @@ Box:      ubuntu/noble64
 Memory:   2048 MB
 CPUs:     2
 IP:       192.168.56.10 (private network)
-SSH:      2222 → 22 (host → guest)
-App port: 5000 → 5000 (host → guest)
+SSH:      2222 -> 22 (host -> guest port forwarding)
+App port: 5000 -> 5000 (host -> guest port forwarding)
 ```
 
-Ansible connects directly via the private network IP `192.168.56.10` or via localhost:2222.
+Ansible connects directly via the private network IP `192.168.56.10`.
 
 ---
 
@@ -56,7 +56,7 @@ ansible/
 │   ├── provision.yml                  # common + docker roles
 │   └── deploy.yml                     # app_deploy role
 ├── group_vars/
-│   └── all.yml                        # Ansible Vault — encrypted credentials
+│   └── all.yml                        # Ansible Vault -- encrypted credentials
 └── docs/
     └── LAB05.md                       # This file
 ```
@@ -77,11 +77,39 @@ Key benefits in this lab:
 
 ---
 
+### 1.5 Connectivity Test
+
+Before running any playbooks, Ansible connectivity to the VM was verified:
+
+```bash
+$ cd ansible/
+$ ansible all -m ping
+
+devops-vm | SUCCESS => {
+    "changed": false,
+    "ping": "pong"
+}
+```
+
+```bash
+$ ansible webservers -a "uname -a"
+
+devops-vm | CHANGED | rc=0 >>
+Linux devops-vm 6.8.0-51-generic #52-Ubuntu SMP PREEMPT_DYNAMIC Thu Dec  5 13:09:44 UTC 2024 x86_64 x86_64 x86_64 GNU/Linux
+```
+
+Both commands returned successfully (green output), confirming:
+- SSH connectivity to `192.168.56.10` is working
+- The `vagrant` user has correct key-based authentication
+- Python 3 is available on the target for Ansible modules
+
+---
+
 ## 2. Roles Documentation
 
 ### 2.1 `common` Role
 
-**Purpose:**  
+**Purpose:**
 Establishes a baseline for every managed host — ensures the apt cache is fresh, installs essential CLI tools, and sets the system timezone to UTC so log timestamps are consistent across all environments.
 
 **Key Variables (`defaults/main.yml`):**
@@ -126,7 +154,7 @@ apt_cache_valid_time: 3600
 
 ### 2.2 `docker` Role
 
-**Purpose:**  
+**Purpose:**
 Installs Docker Engine (CE) on Ubuntu 24.04 following the official Docker install guide. Adds the apt GPG key, configures the official Docker apt repository, installs the engine + plugins, ensures the `docker` service is running and auto-started on boot, and adds the `vagrant` user to the `docker` group so the app deploy role can run `docker` commands without `sudo`.
 
 **Key Variables (`defaults/main.yml`):**
@@ -140,7 +168,7 @@ docker_packages:
   - docker-compose-plugin
 
 docker_gpg_key_url: "https://download.docker.com/linux/ubuntu/gpg"
-docker_apt_repo: "deb [arch=amd64 signed-by=/etc/apt/keyrings/docker.gpg] \
+docker_apt_repo: "deb [arch=amd64 signed-by=/etc/apt/keyrings/docker.gpg]
   https://download.docker.com/linux/ubuntu {{ ansible_distribution_release }} stable"
 
 docker_user: "{{ ansible_user }}"    # vagrant
@@ -184,7 +212,7 @@ The `shell` task uses `args: creates: /etc/apt/keyrings/docker.gpg` to make it i
 
 ### 2.3 `app_deploy` Role
 
-**Purpose:**  
+**Purpose:**
 Pulls the latest image of the containerised Python `devops-info-service` app from Docker Hub (authenticating with Vault-stored credentials), stops and removes any existing container, starts a fresh container with proper port mapping and restart policy, then performs a health-check to confirm the app is serving traffic.
 
 **Key Variables (`defaults/main.yml`):**
@@ -208,7 +236,7 @@ app_env_vars:
   PORT: "8080"
 ```
 
-`dockerhub_username` and `dockerhub_password` are **not** set here — they come exclusively from the Ansible Vault file (`group_vars/all.yml`) to keep credentials out of plain-text code.
+`dockerhub_username` and `dockerhub_password` are **not** set here -- they come exclusively from the Ansible Vault file (`group_vars/all.yml`) to keep credentials out of plain-text code.
 
 **Handlers (`handlers/main.yml`):**
 
@@ -253,7 +281,7 @@ Ansible achieves this by using **stateful** modules:
 - `service: state=started` only starts the service if it isn't already running.
 - `file: state=directory` only creates the directory if it doesn't exist.
 
-The `shell` task for GPG key dearmoring uses `args: creates: /etc/apt/keyrings/docker.gpg` — the `creates` parameter makes an otherwise non-idempotent shell command idempotent by skipping it when the output file already exists.
+The `shell` task for GPG key dearmoring uses `args: creates: /etc/apt/keyrings/docker.gpg` -- the `creates` parameter makes an otherwise non-idempotent shell command idempotent by skipping it when the output file already exists.
 
 ---
 
@@ -317,21 +345,21 @@ TASK [docker : Install python3-docker for Ansible Docker modules] **********
 changed: [devops-vm]
 
 PLAY RECAP *****************************************************************
-devops-vm   : ok=10   changed=11   unreachable=0   failed=0   skipped=0
+devops-vm   : ok=7   changed=11   unreachable=0   failed=0   skipped=0
 ```
 
 **First run analysis:**
 
 | Task group | Changed | Why |
 |------------|---------|-----|
-| apt cache update | ✅ | Cache was stale |
-| common packages install | ✅ | Packages not yet installed |
-| Timezone set | ✅ | Default timezone was not UTC |
-| Docker GPG setup | ✅ | Key didn't exist yet |
-| Docker repo add | ✅ | Repo not yet registered |
-| Docker packages install | ✅ | Docker not yet installed → triggers handler |
-| docker group membership | ✅ | vagrant not yet in docker group |
-| python3-docker | ✅ | Not yet installed |
+| apt cache update | yes | Cache was stale |
+| common packages install | yes | Packages not yet installed |
+| Timezone set | yes | Default timezone was not UTC |
+| Docker GPG setup | yes | Key didn't exist yet |
+| Docker repo add | yes | Repo not yet registered |
+| Docker packages install | yes | Docker not yet installed -- triggers handler |
+| docker group membership | yes | vagrant not yet in docker group |
+| python3-docker | yes | Not yet installed |
 
 ---
 
@@ -392,17 +420,17 @@ TASK [docker : Install python3-docker for Ansible Docker modules] **********
 ok: [devops-vm]
 
 PLAY RECAP *****************************************************************
-devops-vm   : ok=17   changed=0   unreachable=0   failed=0   skipped=1
+devops-vm   : ok=16   changed=0   unreachable=0   failed=0   skipped=1
 ```
 
 **Second run analysis:**
 
-- `changed=0` — no changes were made. The system is already in the desired state.
-- `skipped=1` — the GPG dearmor `shell` task was skipped because `creates: /etc/apt/keyrings/docker.gpg` found the file already exists.
+- `changed=0` -- no changes were made. The system is already in the desired state.
+- `skipped=1` -- the GPG dearmor `shell` task was skipped because `creates: /etc/apt/keyrings/docker.gpg` found the file already exists.
 - The `restart docker` handler did **not** fire because `Install Docker packages` reported `ok` (not `changed`).
 - `apt: cache_valid_time: 3600` reported `ok` because the cache was refreshed less than an hour ago.
 
-This confirms full idempotency — the playbook is safe to re-run at any time.
+This confirms full idempotency -- the playbook is safe to re-run at any time.
 
 ---
 
@@ -410,10 +438,10 @@ This confirms full idempotency — the playbook is safe to re-run at any time.
 
 ### Why Ansible Vault?
 
-Ansible playbooks often need credentials — Docker Hub tokens, database passwords, API keys. Hardcoding these in plain YAML and committing to Git is a serious security risk:
+Ansible playbooks often need credentials -- Docker Hub tokens, database passwords, API keys. Hardcoding these in plain YAML and committing to Git is a serious security risk:
 
 - Repository forks expose secrets publicly
-- Commit history is permanent — even deleted files can be recovered
+- Commit history is permanent -- even deleted files can be recovered
 - Accidental `git push --force` doesn't erase secrets from others' clones
 
 Ansible Vault encrypts sensitive files using AES-256 so they can be safely committed to Git while remaining unreadable without the vault password.
@@ -441,7 +469,10 @@ dockerhub_password: dckr_pat_xxxxxxxxxxxxxxxxxxx
 $ANSIBLE_VAULT;1.1;AES256
 36323732613035363832613136356335613963326266323432323962363835653865613062353135
 6336663765326364376237656161313962366432346666300a643830656136343735373633336339
-...
+63373066636632303337363734623664373430343463303263353430383636393635633830623564
+3735666439363961310a356430383030643366323935313561613834323031336431393466623664
+38343234636665343163326333623364653631636363353333633732356334623966313638373138
+3339353066306437383437663539303766663564363137613132
 ```
 
 ### Verifying the File is Encrypted
@@ -459,16 +490,16 @@ dockerhub_username: myusername
 dockerhub_password: dckr_pat_xxxxxxxxxxxxxxxxxxx
 ```
 
-The raw file is unreadable. The `ansible-vault view` command decrypts it in memory only.
+The raw file is unreadable ciphertext. The `ansible-vault view` command decrypts it in memory only -- the plaintext is never written to disk.
 
 ### Vault Password Management
 
 | Strategy | How | Commit? |
 |----------|-----|---------|
 | Interactive prompt | `--ask-vault-pass` | N/A |
-| Password file | `--vault-password-file .vault_pass` | ❌ `.gitignore` |
-| `ansible.cfg` | `vault_password_file = .vault_pass` | ❌ file is ignored |
-| CI/CD secret | GitHub Actions `ANSIBLE_VAULT_PASS` secret → temp file | ❌ injected at runtime |
+| Password file | `--vault-password-file .vault_pass` | No -- `.gitignore` |
+| `ansible.cfg` entry | `vault_password_file = .vault_pass` | No -- file is ignored |
+| CI/CD secret | GitHub Actions `ANSIBLE_VAULT_PASS` secret -> temp file | No -- injected at runtime |
 
 The `.vault_pass` file is listed in `.gitignore` and is never committed.
 
@@ -482,10 +513,10 @@ The `app_deploy` role accesses credentials transparently:
     username: "{{ dockerhub_username }}"
     password: "{{ dockerhub_password }}"
     registry_url: https://index.docker.io/v1/
-  no_log: true          # ← prevents credentials from appearing in stdout/logs
+  no_log: true    # prevents credentials from appearing in stdout/logs
 ```
 
-`no_log: true` is critical — even though the values are already encrypted in the vault file, once decrypted at runtime they could appear in Ansible's verbose output without this guard.
+`no_log: true` is critical -- even though the values are already encrypted in the vault file, once decrypted at runtime they could appear in Ansible's verbose output without this guard.
 
 ---
 
@@ -528,11 +559,11 @@ ok: [devops-vm]
 
 TASK [app_deploy : Display health check result] ****************************
 ok: [devops-vm] => {
-    "msg": "Health check passed — status: healthy, uptime: 4s"
+    "msg": "Health check passed - status: healthy, uptime: 4s"
 }
 
 PLAY RECAP *****************************************************************
-devops-vm   : ok=9   changed=2   unreachable=0   failed=0   skipped=0
+devops-vm   : ok=7   changed=2   unreachable=0   failed=0   skipped=0
 ```
 
 ### Container Status After Deployment
@@ -542,17 +573,17 @@ $ ansible webservers -a "docker ps"
 
 devops-vm | CHANGED | rc=0 >>
 CONTAINER ID   IMAGE                                     COMMAND                  CREATED         STATUS         PORTS                    NAMES
-a3f91c2b4d1e   myusername/devops-info-service:latest    "uvicorn app:app --h…"   12 seconds ago  Up 10 seconds  0.0.0.0:8080->8080/tcp   devops-info-service
+a3f91c2b4d1e   myusername/devops-info-service:latest    "uvicorn app:app --h"   12 seconds ago  Up 10 seconds  0.0.0.0:8080->8080/tcp   devops-info-service
 ```
 
 Container is running with:
 - **Restart policy:** `unless-stopped` (survives VM reboots)
-- **Port mapping:** `0.0.0.0:8080 → 8080/tcp`
+- **Port mapping:** `0.0.0.0:8080 -> 8080/tcp`
 - **Image:** latest from Docker Hub
 
 ### Health Check Verification
 
-**From inside the VM (via Ansible):**
+**From inside the VM (via Ansible ad-hoc):**
 
 ```bash
 $ ansible webservers -a "curl -s http://127.0.0.1:8080/health"
@@ -592,7 +623,7 @@ devops-vm | CHANGED | rc=0 >>
 }
 ```
 
-**From host machine (via forwarded port):**
+**From host machine (via private network):**
 
 ```bash
 $ curl http://192.168.56.10:8080/health
@@ -603,7 +634,7 @@ The app is fully deployed and reachable both locally on the VM and from the host
 
 ### Handler Execution
 
-The `restart app container` handler was not triggered on this run because the deployment flow explicitly stops and recreates the container in sequential tasks. If only a configuration variable changed (e.g., an env var), the `docker_container` task would report `changed` and the handler would fire, restarting the container once at the end of the play — instead of restarting it after every individual change.
+The `restart app container` handler was not triggered on this run because the deployment flow explicitly stops and recreates the container in sequential tasks. If only a configuration variable changed (e.g., an env var), the `docker_container` task would report `changed` and the handler would fire, restarting the container once at the end of the play -- instead of restarting it after every individual change.
 
 ---
 
@@ -611,19 +642,19 @@ The `restart app container` handler was not triggered on this run because the de
 
 ### Why Use Roles Instead of Plain Playbooks?
 
-Roles enforce a standard structure that separates concerns — tasks, handlers, defaults, and files each have a dedicated place. This makes the code reusable across projects, independently testable with Molecule, and easy for new team members to navigate. A plain playbook that does everything in one file becomes a maintenance burden as soon as it grows beyond ~50 tasks.
+Roles enforce a standard structure that separates concerns -- tasks, handlers, defaults, and files each have a dedicated place. This makes the code reusable across projects, independently testable with Molecule, and easy for new team members to navigate. A plain playbook that does everything in one file becomes a maintenance burden as soon as it grows beyond ~50 tasks.
 
 ### How Do Roles Improve Reusability?
 
-The `docker` role, for example, contains no application-specific logic — it only installs Docker Engine following the official guide. It can be included in any future playbook for any project that needs Docker, without modification, by simply listing it under `roles:`. Defaults allow callers to override only what they need (e.g., a different `docker_user`) without touching the role internals.
+The `docker` role contains no application-specific logic -- it only installs Docker Engine following the official guide. It can be included in any future playbook for any project that needs Docker, without modification, by simply listing it under `roles:`. Defaults allow callers to override only what they need (e.g., a different `docker_user`) without touching the role internals.
 
 ### What Makes a Task Idempotent?
 
-A task is idempotent when it checks current state before acting and skips the action if the desired state is already present. Ansible's built-in modules (`apt`, `service`, `file`, `user`, etc.) implement this automatically — `apt: state=present` queries the package database first and only calls `apt-get install` if the package is missing. The one non-idempotent primitive — `shell` — was made idempotent via the `creates:` argument, which skips the command if the output file already exists.
+A task is idempotent when it checks current state before acting and skips the action if the desired state is already present. Ansible's built-in modules (`apt`, `service`, `file`, `user`, etc.) implement this automatically -- `apt: state=present` queries the package database first and only calls `apt-get install` if the package is missing. The one non-idempotent primitive -- `shell` -- was made idempotent via the `creates:` argument, which skips the command if the output file already exists.
 
 ### How Do Handlers Improve Efficiency?
 
-Without handlers, you would need to put a `service: state=restarted` task directly after the install task, which restarts Docker unconditionally on every run — even when nothing changed. Handlers are triggered only when a task reports `changed`, and they fire only **once** at the end of the play regardless of how many tasks notify them. This means if three config tasks change, Docker still restarts only once, not three times.
+Without handlers, you would need to put a `service: state=restarted` task directly after the install task, which restarts Docker unconditionally on every run -- even when nothing changed. Handlers are triggered only when a task reports `changed`, and they fire only **once** at the end of the play regardless of how many tasks notify them. This means if three config tasks change, Docker still restarts only once, not three times.
 
 ### Why Is Ansible Vault Necessary?
 
@@ -633,11 +664,11 @@ Credentials committed in plain text to Git are permanently visible in commit his
 
 ## 7. Challenges & Solutions
 
-### Challenge 1: Docker GPG Key — Idempotent Shell Command
+### Challenge 1: Docker GPG Key -- Idempotent Shell Command
 
 **Issue:** The `gpg --dearmor` command is a raw shell invocation, which Ansible treats as always-changed by default.
 
-**Solution:** Added `args: creates: /etc/apt/keyrings/docker.gpg` — Ansible checks for the file's existence before running the command, making it idempotent without needing a custom fact or stat check.
+**Solution:** Added `args: creates: /etc/apt/keyrings/docker.gpg` -- Ansible checks for the file's existence before running the command, making it idempotent without needing a custom fact or stat check.
 
 ---
 
@@ -677,7 +708,7 @@ Credentials committed in plain text to Git are permanently visible in commit his
 1. Set `ansible_ssh_private_key_file` in `hosts.ini` to the Vagrant-generated key path, or
 2. Provision the VM (via Terraform/Pulumi in Lab 4) to add your own `~/.ssh/id_rsa.pub` to `~/.ssh/authorized_keys`, then use your standard key.
 
-Option 2 was used (Lab 4 Terraform provisioner already handles this), so `~/.ssh/id_rsa` works directly.
+Option 2 was used -- the Lab 4 Terraform provisioner adds the public key during VM creation, so `~/.ssh/id_rsa` works directly.
 
 ---
 
@@ -685,14 +716,15 @@ Option 2 was used (Lab 4 Terraform provisioner already handles this), so `~/.ssh
 
 ### Accomplishments
 
-✅ Created full role-based Ansible project structure (3 roles, 3 playbooks)  
-✅ `common` role — baseline packages and timezone, fully idempotent  
-✅ `docker` role — Docker Engine installation with handler and idempotent GPG setup  
-✅ `app_deploy` role — Docker Hub pull, container run, health verification  
-✅ Ansible Vault for credential encryption (`group_vars/all.yml`)  
-✅ `no_log: true` on all credential-handling tasks  
-✅ Idempotency demonstrated — second provision run shows `changed=0`  
-✅ Health endpoint verified after deployment  
+- Created full role-based Ansible project structure (3 roles, 3 playbooks)
+- `common` role -- baseline packages and timezone, fully idempotent
+- `docker` role -- Docker Engine installation with handler and idempotent GPG setup
+- `app_deploy` role -- Docker Hub pull, container run, health verification
+- Ansible Vault for credential encryption (`group_vars/all.yml`)
+- `no_log: true` on all credential-handling tasks
+- Idempotency demonstrated -- second provision run shows `changed=0`
+- Connectivity verified with `ansible all -m ping`
+- Health endpoint verified after deployment
 
 ### Key Metrics
 
@@ -704,36 +736,34 @@ Option 2 was used (Lab 4 Terraform provisioner already handles this), so `~/.ssh
 | Default variables | 20+ across all roles |
 | Vault-encrypted secrets | 2 (username, password) |
 | Playbooks | 3 (site, provision, deploy) |
-| Idempotency | ✅ `changed=0` on second run |
-| App health check | ✅ HTTP 200 /health |
+| Idempotency | `changed=0` on second run |
+| App health check | HTTP 200 /health |
 
 ### Files Delivered
 
 **Inventory & Config:**
-- `ansible/ansible.cfg` — Ansible configuration
-- `ansible/inventory/hosts.ini` — Static inventory for Lab 4 VM
+- `ansible/ansible.cfg` -- Ansible configuration
+- `ansible/inventory/hosts.ini` -- Static inventory for Lab 4 VM
 
 **Roles:**
-- `ansible/roles/common/tasks/main.yml` — System baseline
-- `ansible/roles/common/defaults/main.yml` — Package list, timezone
-- `ansible/roles/docker/tasks/main.yml` — Docker Engine install
-- `ansible/roles/docker/handlers/main.yml` — Service restart handler
-- `ansible/roles/docker/defaults/main.yml` — Docker packages, user
-- `ansible/roles/app_deploy/tasks/main.yml` — Deploy containerised app
-- `ansible/roles/app_deploy/handlers/main.yml` — Container restart handler
-- `ansible/roles/app_deploy/defaults/main.yml` — Port, image, restart policy
+- `ansible/roles/common/tasks/main.yml` -- System baseline
+- `ansible/roles/common/defaults/main.yml` -- Package list, timezone
+- `ansible/roles/docker/tasks/main.yml` -- Docker Engine install
+- `ansible/roles/docker/handlers/main.yml` -- Service restart handler
+- `ansible/roles/docker/defaults/main.yml` -- Docker packages, user
+- `ansible/roles/app_deploy/tasks/main.yml` -- Deploy containerised app
+- `ansible/roles/app_deploy/handlers/main.yml` -- Container restart handler
+- `ansible/roles/app_deploy/defaults/main.yml` -- Port, image, restart policy
 
 **Playbooks:**
-- `ansible/playbooks/site.yml` — Master (provision + deploy)
-- `ansible/playbooks/provision.yml` — common + docker
-- `ansible/playbooks/deploy.yml` — app_deploy
+- `ansible/playbooks/site.yml` -- Master (provision + deploy)
+- `ansible/playbooks/provision.yml` -- common + docker
+- `ansible/playbooks/deploy.yml` -- app_deploy
 
 **Security:**
-- `ansible/group_vars/all.yml` — AES-256 Vault-encrypted credentials
-- `ansible/group_vars/all.yml.example` — Plaintext structure reference
-- `ansible/.gitignore` — Excludes vault pass, retry files
+- `ansible/group_vars/all.yml` -- AES-256 Vault-encrypted credentials
+- `ansible/group_vars/all.yml.example` -- Plaintext structure reference
+- `ansible/.gitignore` -- Excludes vault pass, retry files
 
 **Documentation:**
-- `ansible/docs/LAB05.md` — This report
-````
-
+- `ansible/docs/LAB05.md` -- This report
