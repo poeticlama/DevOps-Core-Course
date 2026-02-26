@@ -1,1 +1,9 @@
 test
+
+# Ansible
+*.retry
+.vault_pass
+.vault_password
+ansible/inventory/*.pyc
+ansible/__pycache__/
+

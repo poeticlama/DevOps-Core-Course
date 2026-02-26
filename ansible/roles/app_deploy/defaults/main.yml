@@ -1,0 +1,29 @@
+---
+# Default variables for the app_deploy role
+# Sensitive variables (credentials) are stored in group_vars/all.yml (Ansible Vault)
+
+# Application name
+app_name: devops-info-service
+
+# Docker Hub image
+docker_image: "{{ dockerhub_username }}/{{ app_name }}"
+docker_image_tag: latest
+
+# Container configuration
+app_container_name: "{{ app_name }}"
+app_port_host: 8080
+app_port_container: 8080
+
+# Container restart policy
+app_restart_policy: unless-stopped
+
+# Health check
+app_health_endpoint: "/health"
+app_health_timeout: 30    # seconds to wait for the app
+app_health_delay: 5       # seconds before first health check
+
+# Environment variables passed to the container
+app_env_vars:
+  HOST: "0.0.0.0"
+  PORT: "8080"
+

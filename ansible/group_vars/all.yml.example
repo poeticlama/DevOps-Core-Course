@@ -1,0 +1,19 @@
+---
+# group_vars/all.yml
+# This file is encrypted with Ansible Vault.
+# To edit: ansible-vault edit group_vars/all.yml
+# To view: ansible-vault view group_vars/all.yml
+#
+# Plaintext structure (DO NOT commit unencrypted):
+#
+# dockerhub_username: your-dockerhub-username
+# dockerhub_password: your-dockerhub-access-token
+#
+# The values below are the encrypted representation produced by:
+#   ansible-vault encrypt_string 'value' --name 'key'
+# or by running:
+#   ansible-vault create group_vars/all.yml
+#
+# --- ENCRYPTED CONTENT BELOW (safe to commit) ---
+$ANSIBLE_VAULT;1.1;AES256
+
