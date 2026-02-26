@@ -1,0 +1,32 @@
+name: devops-lab04-iac
+runtime: python
+description: Lab 04 - Infrastructure as Code using Pulumi for local Vagrant VM management
+
+config:
+  vagrant_box:
+    description: "Vagrant box image to use (default: ubuntu/noble64)"
+    default: "ubuntu/noble64"
+  memory_mb:
+    description: "Memory allocated to VM in MB (default: 2048)"
+    default: "2048"
+  cpu_count:
+    description: "Number of vCPUs (default: 2)"
+    default: "2"
+  vm_hostname:
+    description: "Hostname inside the VM (default: devops-vm)"
+    default: "devops-vm"
+  vm_private_ip:
+    description: "Private IP address (default: 192.168.56.10)"
+    default: "192.168.56.10"
+  ssh_host_port:
+    description: "Host port for SSH forwarding (default: 2222)"
+    default: "2222"
+  app_port_host:
+    description: "Host port for app forwarding (default: 5000)"
+    default: "5000"
+  vm_user:
+    description: "Default VM user (default: vagrant)"
+    default: "vagrant"
+  ssh_public_key_path:
+    description: "Path to SSH public key (default: ~/.ssh/id_rsa.pub)"
+    default: "~/.ssh/id_rsa.pub"

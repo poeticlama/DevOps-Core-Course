@@ -1,0 +1,28 @@
+# Pulumi
+Pulumi.*.yaml
+!Pulumi.dev.yaml
+__pycache__/
+*.pyc
+venv/
+.venv/
+
+# Vagrant
+.vagrant/
+*.box
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# SSH
+*.pem
+*.key
+~/.ssh/id_rsa
+~/.ssh/id_rsa.pub
+
+# Credentials
+credentials
