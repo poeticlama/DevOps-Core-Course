@@ -219,7 +219,7 @@ Pulls the latest image of the containerised Python `devops-info-service` app fro
 
 ```yaml
 app_name: devops-info-service
-docker_image: "{{ dockerhub_username }}/{{ app_name }}"
+docker_image: "poeticlama/devops-info-service"
 docker_image_tag: latest
 
 app_container_name: "{{ app_name }}"
@@ -235,8 +235,6 @@ app_env_vars:
   HOST: "0.0.0.0"
   PORT: "8080"
 ```
-
-`dockerhub_username` and `dockerhub_password` are **not** set here -- they come exclusively from the Ansible Vault file (`group_vars/all.yml`) to keep credentials out of plain-text code.
 
 **Handlers (`handlers/main.yml`):**
 

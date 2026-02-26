@@ -1,3 +1,4 @@
+
 ---
 # Default variables for the app_deploy role
 # Sensitive variables (credentials) are stored in group_vars/all.yml (Ansible Vault)
