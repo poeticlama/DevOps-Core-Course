@@ -1,0 +1,39 @@
+---
+# Default variables for the web_app role
+# Sensitive variables (credentials) are stored in group_vars/all.yml (Ansible Vault)
+
+# Application name
+app_name: devops-info-service
+
+# Docker Hub image
+docker_image: "{{ dockerhub_username }}/{{ app_name }}"
+docker_tag: latest
+
+# Container configuration
+app_container_name: "{{ app_name }}"
+app_port_host: 8000
+app_port_container: 8000
+
+# Container restart policy
+app_restart_policy: unless-stopped
+
+# Health check
+app_health_endpoint: "/health"
+app_health_timeout: 30    # seconds to wait for the app
+app_health_delay: 5       # seconds before first health check
+
+# Environment variables passed to the container
+app_env_vars:
+  HOST: "0.0.0.0"
+  PORT: "8000"
+
+# Docker Compose Configuration
+docker_compose_version: '3.8'
+compose_project_dir: "/opt/{{ app_name }}"
+
+# Wipe Logic Control
+# Set to true to remove application completely before deployment
+# Wipe only: ansible-playbook deploy.yml -e "web_app_wipe=true" --tags web_app_wipe
+# Clean install: ansible-playbook deploy.yml -e "web_app_wipe=true"
+web_app_wipe: false
+

@@ -1,0 +1,35 @@
+---
+# Wipe logic for web_app role
+# Safely removes deployed applications with double-gating:
+# - Variable gate: web_app_wipe must be true
+# - Tag gate: must explicitly specify --tags web_app_wipe
+# This prevents accidental removal of production deployments
+
+- name: Stop and remove containers with Docker Compose
+  community.docker.docker_compose_v2:
+    project_src: "{{ compose_project_dir }}"
+    state: absent
+  when: web_app_wipe | bool
+  ignore_errors: yes
+
+- name: Remove docker-compose.yml file
+  file:
+    path: "{{ compose_project_dir }}/docker-compose.yml"
+    state: absent
+  when: web_app_wipe | bool
+
+- name: Remove application directory
+  file:
+    path: "{{ compose_project_dir }}"
+    state: absent
+  when: web_app_wipe | bool
+
+- name: Log wipe completion
+  copy:
+    content: |
+      Application {{ app_name }} wiped successfully at {{ ansible_date_time.iso8601 }}
+      Removed directory: {{ compose_project_dir }}
+      Status: Wipe completed
+    dest: /tmp/{{ app_name }}_wipe_log.txt
+  when: web_app_wipe | bool
+

@@ -1,0 +1,94 @@
+---
+# web_app role -- Deploy containerized applications using Docker Compose
+# Refactored with blocks, tags, wipe logic, and Docker Compose templating
+
+# Wipe logic runs first (when explicitly requested with variable and tag)
+- name: Include wipe tasks
+  include_tasks: wipe.yml
+  tags:
+    - web_app_wipe
+
+# Main deployment logic
+- name: Application deployment block
+  block:
+    - name: Create application directory
+      file:
+        path: "{{ compose_project_dir }}"
+        state: directory
+        mode: '0755'
+
+    - name: Template docker-compose.yml file
+      template:
+        src: docker-compose.yml.j2
+        dest: "{{ compose_project_dir }}/docker-compose.yml"
+        mode: '0644'
+      notify: restart app container
+
+    - name: Pull latest Docker image
+      community.docker.docker_image:
+        name: "{{ docker_image }}"
+        tag: "{{ docker_tag }}"
+        source: pull
+        force_source: yes
+
+    - name: Deploy application with Docker Compose
+      community.docker.docker_compose_v2:
+        project_src: "{{ compose_project_dir }}"
+        state: present
+        pull: always
+
+    - name: Wait for application port to be available
+      wait_for:
+        host: "127.0.0.1"
+        port: "{{ app_port_host }}"
+        delay: "{{ app_health_delay }}"
+        timeout: "{{ app_health_timeout }}"
+        state: started
+
+    - name: Verify application health endpoint
+      uri:
+        url: "http://127.0.0.1:{{ app_port_host }}/health"
+        method: GET
+        status_code: 200
+      register: health_result
+      retries: 5
+      delay: 3
+      until: health_result.status == 200
+
+  rescue:
+    - name: Log deployment failure
+      debug:
+        msg: |
+          Deployment of {{ app_name }} failed.
+          Error: {{ ansible_failed_result.msg | default('Unknown error') }}
+      when: ansible_failed_result is defined
+
+    - name: Attempt to display container logs
+      community.docker.docker_compose_v2:
+        project_src: "{{ compose_project_dir }}"
+        state: present
+      ignore_errors: yes
+
+  always:
+    - name: Log deployment completion
+      copy:
+        content: |
+          Deployment of {{ app_name }} completed at {{ ansible_date_time.iso8601 }}
+          Application directory: {{ compose_project_dir }}
+          Docker image: {{ docker_image }}:{{ docker_tag }}
+          Port mapping: {{ app_port_host }}:{{ app_port_container }}
+        dest: /tmp/{{ app_name }}_deploy_log.txt
+
+    - name: Display deployment summary
+      debug:
+        msg: |
+          Application {{ app_name }} deployment completed
+          Health status: {{ health_result.json.status | default('pending') }}
+          Uptime: {{ health_result.json.uptime_seconds | default('N/A') }}s
+
+  tags:
+    - app_deploy
+    - compose
+    - web_app
+
+
