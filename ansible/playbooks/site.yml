@@ -1,0 +1,9 @@
+---
+# site.yml — master playbook that runs all roles in order
+
+- name: Provision and deploy
+  import_playbook: provision.yml
+
+- name: Deploy application
+  import_playbook: deploy.yml
+

@@ -1,0 +1,24 @@
+# Ansible generated files
+*.retry
+*.pyc
+__pycache__/
+
+# Vault password file — NEVER commit
+.vault_pass
+.vault_password
+
+# Local inventory overrides
+inventory/local.ini
+
+# Python virtualenv
+venv/
+.venv/
+
+# Compiled Python
+*.pyc
+*.pyo
+
+# Temporary files
+*.tmp
+*.log
+

@@ -1,0 +1,11 @@
+---
+# deploy.yml — application deployment playbook
+# Pulls and runs the containerised Python app
+
+- name: Deploy application
+  hosts: webservers
+  become: yes
+
+  roles:
+    - app_deploy
+

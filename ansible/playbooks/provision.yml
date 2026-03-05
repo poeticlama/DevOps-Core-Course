@@ -1,0 +1,12 @@
+---
+# provision.yml — system provisioning playbook
+# Installs common packages and Docker on all web servers
+
+- name: Provision web servers
+  hosts: webservers
+  become: yes
+
+  roles:
+    - common
+    - docker
+
