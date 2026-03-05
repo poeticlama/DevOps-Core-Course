@@ -1,11 +1,11 @@
 ---
 # deploy.yml — application deployment playbook
-# Pulls and runs the containerised Python app
+# Deploys the containerized Python app using Docker Compose
 
 - name: Deploy application
   hosts: webservers
   become: yes
 
   roles:
-    - app_deploy
+    - web_app
 
