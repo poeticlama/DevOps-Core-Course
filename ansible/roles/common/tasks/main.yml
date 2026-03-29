@@ -1,33 +1,62 @@
 ---
 # Common role -- basic system configuration tasks
+# Refactored with blocks and tags for better organization and error handling
 
-- name: Update apt package cache
-  apt:
-    update_cache: yes
-    cache_valid_time: "{{ apt_cache_valid_time }}"
+- name: Package installation block
+  block:
+    - name: Update apt package cache
+      apt:
+        update_cache: yes
+        cache_valid_time: "{{ apt_cache_valid_time }}"
 
-- name: Install common system packages
-  apt:
-    name: "{{ common_packages }}"
-    state: present
+    - name: Install common system packages
+      apt:
+        name: "{{ common_packages }}"
+        state: present
 
-- name: Set system timezone
-  community.general.timezone:
-    name: "{{ common_timezone }}"
+    - name: Remove useless packages from the cache
+      apt:
+        autoclean: yes
 
-- name: Ensure /etc/hosts has the hostname entry
-  lineinfile:
-    path: /etc/hosts
-    regexp: '^127\.0\.1\.1'
-    line: "127.0.1.1 {{ ansible_hostname }}"
-    state: present
+    - name: Remove dependencies that are no longer required
+      apt:
+        autoremove: yes
 
-- name: Remove useless packages from the cache
-  apt:
-    autoclean: yes
+  rescue:
+    - name: Retry apt update with --fix-missing flag
+      shell: apt-get update --fix-missing
+      become: true
 
-- name: Remove dependencies that are no longer required
-  apt:
-    autoremove: yes
+    - name: Log rescue execution
+      debug:
+        msg: "Package installation failed, retry with --fix-missing was executed"
+
+  always:
+    - name: Log package installation block completion
+      copy:
+        content: |
+          Package installation completed at {{ ansible_date_time.iso8601 }}
+          Status: Success
+        dest: /tmp/common_packages_log.txt
+
+  tags:
+    - packages
+    - common
+
+- name: System configuration block
+  block:
+    - name: Set system timezone
+      community.general.timezone:
+        name: "{{ common_timezone }}"
+
+    - name: Ensure /etc/hosts has the hostname entry
+      lineinfile:
+        path: /etc/hosts
+        regexp: '^127\.0\.1\.1'
+        line: "127.0.1.1 {{ ansible_hostname }}"
+        state: present
+
+  tags:
+    - common
 
 

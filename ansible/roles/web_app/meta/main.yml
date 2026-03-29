@@ -1,0 +1,10 @@
+---
+# Role metadata and dependencies for web_app
+
+# Role dependencies: Ensure docker is installed before deploying web apps
+dependencies:
+  - role: docker
+    tags:
+      - docker
+      - web_app
+

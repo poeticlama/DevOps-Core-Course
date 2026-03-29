@@ -1,0 +1,45 @@
+---
+# Docker Compose template for web application deployment
+# This file is templated using Jinja2 for dynamic configuration
+
+version: '{{ docker_compose_version }}'
+
+services:
+  {{ app_name }}:
+    image: {{ docker_image }}:{{ docker_tag }}
+    container_name: {{ app_container_name }}
+
+    ports:
+      - "{{ app_port_host }}:{{ app_port_container }}"
+
+    environment:
+      HOST: "{{ app_env_vars.HOST | default('0.0.0.0') }}"
+      PORT: "{{ app_env_vars.PORT | default(app_port_container) }}"
+
+    restart_policy:
+      condition: unless-stopped
+      max_attempts: 3
+      delay: 5s
+
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:{{ app_port_container }}/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    # Resource limits (optional - uncomment if needed)
+    # resources:
+    #   limits:
+    #     cpus: '1'
+    #     memory: 512M
+    #   reservations:
+    #     cpus: '0.5'
+    #     memory: 256M
+
