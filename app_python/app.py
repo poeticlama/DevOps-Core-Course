@@ -1,14 +1,51 @@
 import os
+import sys
 import socket
 import platform
 import logging
+import json
 from datetime import datetime, timezone
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
-# Logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+
+# JSON Logging Formatter
+class JSONFormatter(logging.Formatter):
+    def format(self, record):
+        log_obj = {
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "level": record.levelname,
+            "logger": record.name,
+            "message": record.getMessage(),
+            "module": record.module,
+            "function": record.funcName,
+            "line": record.lineno,
+        }
+        if record.exc_info:
+            log_obj["exception"] = self.formatException(record.exc_info)
+        return json.dumps(log_obj)
+
+
+# Configure JSON logging
+def setup_logging():
+    log_level = os.getenv("LOG_LEVEL", "INFO")
+    root_logger = logging.getLogger()
+    root_logger.setLevel(log_level)
+    
+    # Remove default handlers
+    for handler in root_logger.handlers[:]:
+        root_logger.removeHandler(handler)
+    
+    # Add JSON handler to stdout
+    handler = logging.StreamHandler(sys.stdout)
+    handler.setFormatter(JSONFormatter())
+    root_logger.addHandler(handler)
+    
+    return root_logger
+
+
+logger = setup_logging()
+app_logger = logging.getLogger(__name__)
 
 # App
 app = FastAPI(
@@ -16,6 +53,24 @@ app = FastAPI(
     version="1.0.0",
     description="DevOps course info service"
 )
+
+# Log app startup
+@app.on_event("startup")
+async def startup_event():
+    app_logger.info("DevOps Info Service starting up")
+
+
+# Middleware for logging requests
+@app.middleware("http")
+async def log_requests(request: Request, call_next):
+    app_logger.info(f"HTTP request: {request.method} {request.url.path} from {request.client.host if request.client else 'unknown'}")
+    
+    response = await call_next(request)
+    
+    app_logger.info(f"HTTP response: {request.method} {request.url.path} -> {response.status_code}")
+    
+    return response
+
 
 # Config
 HOST = os.getenv("HOST", "127.0.0.1")
@@ -82,7 +137,9 @@ async def health():
 
 @app.exception_handler(404)
 async def not_found(_, __):
+    app_logger.warning("404 Not Found endpoint accessed")
     return JSONResponse(
         status_code=404,
         content={"error": "Not Found", "message": "Endpoint does not exist"}
     )
+

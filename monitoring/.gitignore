@@ -1,0 +1,30 @@
+# Environment files with secrets
+.env
+.env.local
+
+# Data volumes (persistent storage)
+loki-data/
+grafana-data/
+promtail-data/
+
+# Grafana SQLite database
+grafana.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker
+.docker/
+*.log
+
+# Grafana provisioning overrides
+grafana/provisioning/dashboards/*.json.bak
+
