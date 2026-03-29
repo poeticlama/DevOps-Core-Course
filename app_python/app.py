@@ -5,8 +5,10 @@ import platform
 import logging
 import json
 from datetime import datetime, timezone
-from fastapi import FastAPI, Request
-from fastapi.responses import JSONResponse
+from fastapi import FastAPI, Request, Response
+from fastapi.responses import JSONResponse, PlainTextResponse
+from prometheus_client import Counter, Histogram, Gauge, generate_latest, CONTENT_TYPE_LATEST
+import time
 
 
 # JSON Logging Formatter
@@ -54,6 +56,30 @@ app = FastAPI(
     description="DevOps course info service"
 )
 
+# Define metrics
+http_requests_total = Counter(
+    "http_requests_total",
+    "Total HTTP requests",
+    ["method", "endpoint", "status"]
+)
+
+http_request_duration_seconds = Histogram(
+    "http_request_duration_seconds",
+    "HTTP request duration",
+    ["method", "endpoint"]
+)
+
+http_requests_in_progress = Gauge(
+    "http_requests_in_progress",
+    "HTTP requests currently being processed",
+    ["method", "endpoint"]
+)
+
+devops_info_system_collection_seconds = Histogram(
+    "devops_info_system_collection_seconds",
+    "System info collection time"
+)
+
 # Log app startup
 @app.on_event("startup")
 async def startup_event():
@@ -65,8 +91,27 @@ async def startup_event():
 async def log_requests(request: Request, call_next):
     app_logger.info(f"HTTP request: {request.method} {request.url.path} from {request.client.host if request.client else 'unknown'}")
     
-    response = await call_next(request)
-    
+    start_time = time.time()
+    method = request.method
+    endpoint = request.url.path
+
+    # Filter out metrics endpoint if you don't want to track it, but we'll track it
+    # We can normalize dynamic URLs here if needed
+
+    http_requests_in_progress.labels(method=method, endpoint=endpoint).inc()
+
+    try:
+        response = await call_next(request)
+        status_code = response.status_code
+    except Exception as e:
+        status_code = 500
+        raise e
+    finally:
+        duration = time.time() - start_time
+        http_requests_in_progress.labels(method=method, endpoint=endpoint).dec()
+        http_requests_total.labels(method=method, endpoint=endpoint, status=str(status_code)).inc()
+        http_request_duration_seconds.labels(method=method, endpoint=endpoint).observe(duration)
+
     app_logger.info(f"HTTP response: {request.method} {request.url.path} -> {response.status_code}")
     
     return response
@@ -89,7 +134,17 @@ def get_uptime():
 
 @app.get("/")
 async def index(request: Request):
+    col_start = time.time()
     uptime_seconds, uptime_human = get_uptime()
+    system_info = {
+        "hostname": socket.gethostname(),
+        "platform": platform.system(),
+        "platform_version": platform.version(),
+        "architecture": platform.machine(),
+        "cpu_count": os.cpu_count(),
+        "python_version": platform.python_version()
+    }
+    devops_info_system_collection_seconds.observe(time.time() - col_start)
 
     return {
         "service": {
@@ -98,14 +153,7 @@ async def index(request: Request):
             "description": "DevOps course info service",
             "framework": "FastAPI"
         },
-        "system": {
-            "hostname": socket.gethostname(),
-            "platform": platform.system(),
-            "platform_version": platform.version(),
-            "architecture": platform.machine(),
-            "cpu_count": os.cpu_count(),
-            "python_version": platform.python_version()
-        },
+        "system": system_info,
         "runtime": {
             "uptime_seconds": uptime_seconds,
             "uptime_human": uptime_human,
@@ -120,10 +168,14 @@ async def index(request: Request):
         },
         "endpoints": [
             {"path": "/", "method": "GET", "description": "Service information"},
-            {"path": "/health", "method": "GET", "description": "Health check"}
+            {"path": "/health", "method": "GET", "description": "Health check"},
+            {"path": "/metrics", "method": "GET", "description": "Prometheus metrics"}
         ]
     }
 
+@app.get("/metrics")
+async def metrics():
+    return Response(generate_latest(), media_type=CONTENT_TYPE_LATEST)
 
 @app.get("/health")
 async def health():
@@ -142,4 +194,3 @@ async def not_found(_, __):
         status_code=404,
         content={"error": "Not Found", "message": "Endpoint does not exist"}
     )
-
