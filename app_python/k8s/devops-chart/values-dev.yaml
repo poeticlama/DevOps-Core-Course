@@ -1,0 +1,56 @@
+# Development environment values for devops-info-service
+
+# Single replica for development
+replicaCount: 1
+
+# Development image configuration
+image:
+  repository: poeticlama/devops-info-service
+  tag: "latest"
+  pullPolicy: Always
+
+# Development service configuration (NodePort for local access)
+service:
+  type: NodePort
+  port: 80
+  targetPort: 8080
+  nodePort: 30080
+
+# Relaxed resource limits for development
+resources:
+  limits:
+    cpu: 100m
+    memory: 128Mi
+  requests:
+    cpu: 50m
+    memory: 64Mi
+
+# More lenient probes for development
+livenessProbe:
+  httpGet:
+    path: /health
+    port: 8080
+  initialDelaySeconds: 15
+  periodSeconds: 10
+  timeoutSeconds: 2
+  failureThreshold: 3
+
+readinessProbe:
+  httpGet:
+    path: /health
+    port: 8080
+  initialDelaySeconds: 10
+  periodSeconds: 5
+  timeoutSeconds: 1
+  failureThreshold: 2
+
+# Development namespace
+namespace: default
+
+# Relaxed rolling update for development
+strategy:
+  type: RollingUpdate
+  rollingUpdate:
+    maxSurge: 1
+    maxUnavailable: 1
+

@@ -1,0 +1,55 @@
+# Production environment values for devops-info-service
+
+# Higher replica count for production
+replicaCount: 5
+
+# Production image configuration with specific version
+image:
+  repository: poeticlama/devops-info-service
+  tag: "1.0"
+  pullPolicy: IfNotPresent
+
+# Production service configuration (LoadBalancer for external access)
+service:
+  type: LoadBalancer
+  port: 80
+  targetPort: 8080
+
+# Higher resource limits for production
+resources:
+  limits:
+    cpu: 500m
+    memory: 512Mi
+  requests:
+    cpu: 200m
+    memory: 256Mi
+
+# Stricter probes for production
+livenessProbe:
+  httpGet:
+    path: /health
+    port: 8080
+  initialDelaySeconds: 30
+  periodSeconds: 5
+  timeoutSeconds: 2
+  failureThreshold: 3
+
+readinessProbe:
+  httpGet:
+    path: /health
+    port: 8080
+  initialDelaySeconds: 10
+  periodSeconds: 3
+  timeoutSeconds: 1
+  failureThreshold: 2
+
+# Production namespace
+namespace: production
+
+# Conservative rolling update for production
+strategy:
+  type: RollingUpdate
+  rollingUpdate:
+    maxSurge: 1
+    maxUnavailable: 0
+

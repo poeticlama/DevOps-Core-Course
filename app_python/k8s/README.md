@@ -576,10 +576,127 @@ kubectl get all
 
 ---
 
+## Helm Chart Deployment
+
+### Location
+
+```
+devops-chart/  - Complete Helm chart for environment-agnostic deployment
+```
+
+### Features
+
+* **Templated Manifests** - Kubernetes resources generated from Go templates
+* **Environment-Specific Values** - Development and production configurations
+* **Lifecycle Hooks** - Pre-install and post-install automation
+* **Security Best Practices** - Non-root execution, resource limits, security contexts
+* **Health Management** - Liveness and readiness probes configured
+
+### Quick Installation
+
+**Development:**
+```bash
+helm install devops-release ./devops-chart -f devops-chart/values-dev.yaml
+```
+
+**Production:**
+```bash
+helm install devops-release ./devops-chart -f devops-chart/values-prod.yaml
+```
+
+### Chart Files
+
+* `Chart.yaml` - Chart metadata and versioning
+* `values.yaml` - Default configuration values
+* `values-dev.yaml` - Development environment overrides (1 replica, NodePort)
+* `values-prod.yaml` - Production environment overrides (5 replicas, LoadBalancer)
+* `templates/_helpers.tpl` - Reusable template functions
+* `templates/deployment.yaml` - Deployment template with full configuration
+* `templates/service.yaml` - Service template supporting multiple types
+* `templates/hooks/pre-install-job.yaml` - Pre-installation validation
+* `templates/hooks/post-install-job.yaml` - Post-installation smoke tests
+
+### Helm Commands
+
+```bash
+# Validate chart syntax
+helm lint ./devops-chart
+
+# Preview rendered templates
+helm template devops-release ./devops-chart
+helm template devops-release ./devops-chart -f devops-chart/values-prod.yaml --debug
+
+# Install release
+helm install devops-release ./devops-chart -f devops-chart/values-prod.yaml
+
+# Upgrade release
+helm upgrade devops-release ./devops-chart -f devops-chart/values-prod.yaml
+
+# View release status
+helm status devops-release
+helm get values devops-release
+helm get manifest devops-release
+
+# Rollback release
+helm rollback devops-release
+
+# Uninstall release
+helm uninstall devops-release
+```
+
+### Configuration Overrides
+
+```bash
+# Override individual values
+helm install devops-release ./devops-chart \
+  --set replicaCount=2 \
+  --set service.type=LoadBalancer
+
+# Use multiple values files
+helm install devops-release ./devops-chart \
+  -f devops-chart/values-prod.yaml \
+  -f custom-values.yaml
+```
+
+### Accessing the Service
+
+**NodePort (Development):**
+```bash
+curl http://localhost:30080/
+curl http://localhost:30080/health
+```
+
+**LoadBalancer (Production):**
+```bash
+# Get external IP
+kubectl get svc devops-info-service -n production
+
+# Access service
+curl http://<EXTERNAL-IP>/
+curl http://<EXTERNAL-IP>/health
+```
+
+### Hook Execution
+
+Pre-install and post-install hooks automatically execute during chart lifecycle:
+
+```bash
+# View hook execution
+kubectl get jobs
+kubectl logs -f job/<hook-job-name>
+```
+
+### For Detailed Implementation
+
+See `../docs/LAB10.md` for comprehensive Helm chart documentation.
+
+---
+
 ## Additional Resources
 
 - [Kubernetes Documentation](https://kubernetes.io/docs/)
 - [kubectl Cheat Sheet](https://kubernetes.io/docs/reference/kubectl/quick-reference/)
+- [Helm Official Documentation](https://helm.sh/docs/)
 - [Deployment Best Practices](https://kubernetes.io/docs/concepts/configuration/overview/)
 - [Health Checks](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/)
 - [Resource Management](https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/)
@@ -588,5 +705,6 @@ kubectl get all
 
 **Status**: ✅ Production Ready  
 **Last Updated**: April 2, 2026  
-**Kubernetes Version**: 1.33.0
+**Kubernetes Version**: 1.33.0  
+**Helm Charts**: ✅ Implemented
 
