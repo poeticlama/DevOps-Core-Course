@@ -54,3 +54,18 @@ strategy:
     maxSurge: 1
     maxUnavailable: 1
 
+# Development secrets configuration
+secrets:
+  enabled: true
+  credentials:
+    username: "dev_admin"
+    password: "dev_password_123"
+    api_key: "dev-api-key-xyz"
+    database_url: "postgresql://localhost:5432/devdb"
+
+# Vault configuration (disabled for development)
+vault:
+  enabled: false
+  role: "devops-app-dev"
+  secretPath: "secret/data/devops-app/dev"
+

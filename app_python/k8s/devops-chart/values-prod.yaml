@@ -53,3 +53,18 @@ strategy:
     maxSurge: 1
     maxUnavailable: 0
 
+# Production secrets configuration
+secrets:
+  enabled: true
+  credentials:
+    username: "prod_admin"
+    password: "PLACEHOLDER_PROD_PASSWORD"
+    api_key: "PLACEHOLDER_PROD_API_KEY"
+    database_url: "postgresql://prod-db.internal:5432/proddb"
+
+# Vault configuration (enabled for production)
+vault:
+  enabled: true
+  role: "devops-app-prod"
+  secretPath: "secret/data/devops-app/prod"
+

@@ -44,3 +44,14 @@ app.kubernetes.io/name: {{ include "devops-chart.name" . }}
 app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}
 
+{{/*
+Vault Agent Template for environment variables
+*/}}
+{{- define "devops-chart.vaultTemplate" -}}
+{{- with secret .Values.vault.secretPath }}
+{{- range $key, $value := .Data.data }}
+{{ $key }}={{ $value }}
+{{- end }}
+{{- end }}
+{{- end }}
+
