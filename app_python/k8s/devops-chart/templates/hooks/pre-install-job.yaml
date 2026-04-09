@@ -1,0 +1,41 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: "{{ include "devops-chart.fullname" . }}-pre-install"
+  namespace: {{ .Values.namespace }}
+  labels:
+    {{- include "devops-chart.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": pre-install
+    "helm.sh/hook-weight": "-5"
+    "helm.sh/hook-delete-policy": hook-succeeded
+
+spec:
+  template:
+    metadata:
+      name: "{{ include "devops-chart.fullname" . }}-pre-install"
+      labels:
+        {{- include "devops-chart.selectorLabels" . | nindent 8 }}
+    spec:
+      restartPolicy: Never
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        fsGroup: 1000
+      containers:
+      - name: pre-install-job
+        image: busybox:latest
+        command:
+          - sh
+          - -c
+          - |
+            echo "=== Pre-install Hook Execution ==="
+            echo "Starting pre-installation validation..."
+            echo "Current timestamp: $(date)"
+            echo "Release name: {{ .Release.Name }}"
+            echo "Chart name: {{ .Chart.Name }}"
+            echo "Namespace: {{ .Values.namespace }}"
+            sleep 5
+            echo "Pre-installation validation completed successfully"
+            exit 0
+
