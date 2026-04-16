@@ -66,3 +66,18 @@ labels:
   tier: application
   component: service
 
+# Secrets configuration
+secrets:
+  enabled: true
+  credentials:
+    username: "app_admin"
+    password: "changeme123"
+    api_key: "default-api-key"
+    database_url: "postgresql://localhost:5432/appdb"
+
+# Vault configuration for Agent Injection
+vault:
+  enabled: false
+  role: "devops-app"
+  secretPath: "secret/data/devops-app"
+
