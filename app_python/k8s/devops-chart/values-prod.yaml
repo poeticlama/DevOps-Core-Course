@@ -68,3 +68,17 @@ vault:
   role: "devops-app-prod"
   secretPath: "secret/data/devops-app/prod"
 
+# Production application configuration
+config:
+  appName: "DevOps Info Service (Prod)"
+  environment: "production"
+  logLevel: "INFO"
+  metricsEnabled: true
+
+# Persistence configuration for production
+persistence:
+  enabled: true
+  size: 10Gi
+  storageClass: null  # Use production storage class if available
+
+

@@ -39,6 +39,16 @@ spec:
       securityContext:
         {{- toYaml .Values.securityContext | nindent 8 }}
 
+      volumes:
+      - name: config
+        configMap:
+          name: {{ include "devops-chart.fullname" . }}-config
+      {{- if .Values.persistence.enabled }}
+      - name: data
+        persistentVolumeClaim:
+          claimName: {{ include "devops-chart.fullname" . }}-data
+      {{- end }}
+
       containers:
       - name: {{ .Chart.Name }}
         image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
@@ -49,10 +59,20 @@ spec:
           containerPort: {{ .Values.service.targetPort }}
           protocol: TCP
 
-        {{- if .Values.secrets.enabled }}
         envFrom:
+        - configMapRef:
+            name: {{ include "devops-chart.fullname" . }}-env
+        {{- if .Values.secrets.enabled }}
         - secretRef:
             name: {{ include "devops-chart.fullname" . }}-credentials
+        {{- end }}
+
+        volumeMounts:
+        - name: config
+          mountPath: /etc/config
+        {{- if .Values.persistence.enabled }}
+        - name: data
+          mountPath: /data
         {{- end }}
 
         livenessProbe:
