@@ -1,0 +1,23 @@
+version: '3.9'
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: devops-info-service
+    ports:
+      - "8080:8080"
+    environment:
+      - LOG_LEVEL=INFO
+      - VISITS_FILE_PATH=/data/visits
+    volumes:
+      - ./data:/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+

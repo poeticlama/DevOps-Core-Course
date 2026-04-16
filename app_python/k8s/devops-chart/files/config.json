@@ -1,0 +1,19 @@
+{
+  "appName": "DevOps Info Service",
+  "environment": "production",
+  "version": "1.0.0",
+  "features": {
+    "metricsEnabled": true,
+    "healthCheckEnabled": true,
+    "visitCounterEnabled": true
+  },
+  "logging": {
+    "level": "INFO",
+    "format": "json"
+  },
+  "server": {
+    "port": 8080,
+    "host": "0.0.0.0"
+  }
+}
+
