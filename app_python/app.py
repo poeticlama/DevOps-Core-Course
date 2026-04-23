@@ -9,6 +9,8 @@ from fastapi import FastAPI, Request, Response
 from fastapi.responses import JSONResponse, PlainTextResponse
 from prometheus_client import Counter, Histogram, Gauge, generate_latest, CONTENT_TYPE_LATEST
 import time
+from pathlib import Path
+import threading
 
 
 # JSON Logging Formatter
@@ -48,6 +50,41 @@ def setup_logging():
 
 logger = setup_logging()
 app_logger = logging.getLogger(__name__)
+
+# Visits Counter with File-Based Persistence
+VISITS_FILE = Path(os.getenv("VISITS_FILE_PATH", "/data/visits"))
+visits_lock = threading.Lock()
+
+def ensure_visits_directory():
+    """Ensure the directory for visits file exists"""
+    VISITS_FILE.parent.mkdir(parents=True, exist_ok=True)
+
+def read_visits_count():
+    """Read visits count from file, return 0 if file doesn't exist"""
+    try:
+        if VISITS_FILE.exists():
+            with open(VISITS_FILE, 'r') as f:
+                return int(f.read().strip())
+    except (ValueError, IOError) as e:
+        app_logger.warning(f"Error reading visits file: {e}")
+    return 0
+
+def increment_visits():
+    """Increment visits count and persist to file"""
+    with visits_lock:
+        current_count = read_visits_count()
+        new_count = current_count + 1
+        try:
+            with open(VISITS_FILE, 'w') as f:
+                f.write(str(new_count))
+        except IOError as e:
+            app_logger.error(f"Error writing visits file: {e}")
+        return new_count
+
+# Initialize visits file on startup
+ensure_visits_directory()
+current_visits = read_visits_count()
+app_logger.info(f"Initialized visits counter: {current_visits}")
 
 # App
 app = FastAPI(
@@ -135,6 +172,10 @@ def get_uptime():
 @app.get("/")
 async def index(request: Request):
     col_start = time.time()
+
+    # Increment visits counter
+    visits_count = increment_visits()
+
     uptime_seconds, uptime_human = get_uptime()
     system_info = {
         "hostname": socket.gethostname(),
@@ -151,7 +192,8 @@ async def index(request: Request):
             "name": "devops-info-service",
             "version": "1.0.0",
             "description": "DevOps course info service",
-            "framework": "FastAPI"
+            "framework": "FastAPI",
+            "visits": visits_count
         },
         "system": system_info,
         "runtime": {
@@ -169,8 +211,19 @@ async def index(request: Request):
         "endpoints": [
             {"path": "/", "method": "GET", "description": "Service information"},
             {"path": "/health", "method": "GET", "description": "Health check"},
+            {"path": "/visits", "method": "GET", "description": "Get total visit count"},
             {"path": "/metrics", "method": "GET", "description": "Prometheus metrics"}
         ]
+    }
+
+@app.get("/visits")
+async def get_visits():
+    """Return the current visits count"""
+    visits_count = read_visits_count()
+    app_logger.info(f"Visits endpoint accessed. Current count: {visits_count}")
+    return {
+        "visits": visits_count,
+        "timestamp": datetime.now(timezone.utc).isoformat()
     }
 
 @app.get("/metrics")

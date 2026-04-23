@@ -81,3 +81,17 @@ vault:
   role: "devops-app"
   secretPath: "secret/data/devops-app"
 
+# Application configuration
+config:
+  appName: "DevOps Info Service"
+  environment: "production"
+  logLevel: "INFO"
+  metricsEnabled: true
+
+# Persistence configuration for visits counter
+persistence:
+  enabled: true
+  size: 1Gi
+  storageClass: null  # Use default storage class if null
+
+

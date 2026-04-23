@@ -69,3 +69,17 @@ vault:
   role: "devops-app-dev"
   secretPath: "secret/data/devops-app/dev"
 
+# Development application configuration
+config:
+  appName: "DevOps Info Service (Dev)"
+  environment: "development"
+  logLevel: "DEBUG"
+  metricsEnabled: true
+
+# Persistence configuration for development
+persistence:
+  enabled: true
+  size: 500Mi
+  storageClass: null
+
+
