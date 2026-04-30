@@ -1,0 +1,96 @@
+# Values for Blue-Green Deployment Strategy
+
+rollout:
+  enabled: true
+  strategy: bluegreen
+  bluegreen:
+    autoPromotionEnabled: false
+    # autoPromotionSeconds: 30
+
+# Blue-green-specific configuration
+replicaCount: 3
+
+# Service configuration for blue-green
+service:
+  type: NodePort
+  port: 80
+  targetPort: 8080
+  nodePort: 30080
+  previewNodePort: 30081
+
+# Image - blue-green creates separate active and preview pod sets
+image:
+  repository: poeticlama/devops-info-service
+  tag: "1.0"
+  pullPolicy: IfNotPresent
+
+# Resource configuration
+resources:
+  limits:
+    cpu: 200m
+    memory: 256Mi
+  requests:
+    cpu: 100m
+    memory: 128Mi
+
+# Probes configuration
+livenessProbe:
+  httpGet:
+    path: /health
+    port: 8080
+  initialDelaySeconds: 10
+  periodSeconds: 5
+  timeoutSeconds: 2
+  failureThreshold: 3
+
+readinessProbe:
+  httpGet:
+    path: /health
+    port: 8080
+  initialDelaySeconds: 5
+  periodSeconds: 3
+  timeoutSeconds: 1
+  failureThreshold: 2
+
+# Security context
+securityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  fsGroup: 1000
+
+# Namespace
+namespace: default
+
+# Labels
+labels:
+  tier: application
+  component: service
+
+# Application config
+config:
+  appName: "DevOps Info Service"
+  environment: "bluegreen-test"
+  logLevel: "DEBUG"
+  metricsEnabled: true
+
+# Secrets configuration
+secrets:
+  enabled: true
+  credentials:
+    username: "app_admin"
+    password: "changeme123"
+    api_key: "bluegreen-api-key"
+    database_url: "postgresql://localhost:5432/appdb"
+
+# Persistence configuration
+persistence:
+  enabled: true
+  size: 1Gi
+  storageClass: null
+
+# Vault configuration
+vault:
+  enabled: false
+  role: "devops-app"
+  secretPath: "secret/data/devops-app"
+
