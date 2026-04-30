@@ -1,0 +1,21 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: python-app
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/poeticlama/DevOps-Core-Course.git
+    targetRevision: main
+    path: app_python/k8s/devops-chart
+    helm:
+      valueFiles:
+        - values.yaml
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: default
+  syncPolicy:
+    syncOptions:
+      - CreateNamespace=true
+
