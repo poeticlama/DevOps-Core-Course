@@ -1,0 +1,64 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: init-containers-demo
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: init-demo
+  template:
+    metadata:
+      labels:
+        app: init-demo
+    spec:
+      initContainers:
+        # Task 3.1: Download file using wget
+        - name: init-download
+          image: busybox:1.36
+          command:
+            - sh
+            - -c
+            - wget -O /work-dir/index.html https://httpbin.org/html && echo "File downloaded successfully"
+          volumeMounts:
+            - name: workdir
+              mountPath: /work-dir
+        # Task 3.2: Wait-for-service pattern
+        - name: wait-for-service
+          image: busybox:1.36
+          command:
+            - sh
+            - -c
+            - |
+              echo "Waiting for app service to be ready..."
+              until nslookup app.default.svc.cluster.local > /dev/null 2>&1; do
+                echo "Service not ready, retrying in 2 seconds..."
+                sleep 2
+              done
+              echo "Service is ready!"
+      containers:
+        - name: main-app
+          image: busybox:1.36
+          command:
+            - sh
+            - -c
+            - |
+              echo "Main container started"
+              echo "Checking downloaded file:"
+              cat /data/index.html
+              sleep 3600
+          volumeMounts:
+            - name: workdir
+              mountPath: /data
+          resources:
+            requests:
+              memory: "64Mi"
+              cpu: "100m"
+            limits:
+              memory: "128Mi"
+              cpu: "200m"
+      volumes:
+        - name: workdir
+          emptyDir: {}
+
