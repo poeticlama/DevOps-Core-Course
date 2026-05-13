@@ -1,0 +1,33 @@
+{{- if eq .Values.rollout.strategy "bluegreen" }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "devops-chart.fullname" . }}-preview
+  namespace: {{ .Values.namespace }}
+  labels:
+    {{- include "devops-chart.labels" . | nindent 4 }}
+    service-type: preview
+    {{- with .Values.labels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+  annotations:
+    description: "Preview service for DevOps Info Service - serves new version during blue-green deployment"
+
+spec:
+  type: {{ .Values.service.type }}
+
+  selector:
+    {{- include "devops-chart.selectorLabels" . | nindent 4 }}
+
+  ports:
+  - name: http
+    protocol: TCP
+    port: {{ .Values.service.port }}
+    targetPort: {{ .Values.service.targetPort }}
+    {{- if eq .Values.service.type "NodePort" }}
+    nodePort: {{ .Values.service.previewNodePort }}
+    {{- end }}
+
+  sessionAffinity: None
+{{- end }}
+

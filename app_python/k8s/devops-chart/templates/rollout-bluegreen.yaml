@@ -1,0 +1,95 @@
+{{- if eq .Values.rollout.strategy "bluegreen" }}
+apiVersion: argoproj.io/v1alpha1
+kind: Rollout
+metadata:
+  name: {{ include "devops-chart.fullname" . }}
+  namespace: {{ .Values.namespace }}
+  labels:
+    {{- include "devops-chart.labels" . | nindent 4 }}
+    strategy: bluegreen
+    {{- with .Values.labels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+
+spec:
+  replicas: {{ .Values.replicaCount }}
+
+  selector:
+    matchLabels:
+      {{- include "devops-chart.selectorLabels" . | nindent 6 }}
+
+  template:
+    metadata:
+      labels:
+        {{- include "devops-chart.selectorLabels" . | nindent 8 }}
+        version: {{ .Chart.AppVersion | quote }}
+      annotations:
+        description: "DevOps Info Service blue-green rollout"
+        {{- if .Values.vault.enabled }}
+        vault.hashicorp.com/agent-inject: "true"
+        vault.hashicorp.com/role: {{ .Values.vault.role | quote }}
+        vault.hashicorp.com/agent-inject-secret-config: {{ .Values.vault.secretPath | quote }}
+        vault.hashicorp.com/agent-inject-template-config: |
+          {{- include "devops-chart.vaultTemplate" . | nindent 10 }}
+        {{- end }}
+
+    spec:
+      serviceAccountName: default
+      securityContext:
+        {{- toYaml .Values.securityContext | nindent 8 }}
+
+      volumes:
+      - name: config
+        configMap:
+          name: {{ include "devops-chart.fullname" . }}-config
+      {{- if .Values.persistence.enabled }}
+      - name: data
+        persistentVolumeClaim:
+          claimName: {{ include "devops-chart.fullname" . }}-data
+      {{- end }}
+
+      containers:
+      - name: {{ .Chart.Name }}
+        image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+        imagePullPolicy: {{ .Values.image.pullPolicy }}
+
+        ports:
+        - name: http
+          containerPort: {{ .Values.service.targetPort }}
+          protocol: TCP
+
+        envFrom:
+        - configMapRef:
+            name: {{ include "devops-chart.fullname" . }}-env
+        {{- if .Values.secrets.enabled }}
+        - secretRef:
+            name: {{ include "devops-chart.fullname" . }}-credentials
+        {{- end }}
+
+        volumeMounts:
+        - name: config
+          mountPath: /etc/config
+        {{- if .Values.persistence.enabled }}
+        - name: data
+          mountPath: /data
+        {{- end }}
+
+        livenessProbe:
+          {{- toYaml .Values.livenessProbe | nindent 10 }}
+
+        readinessProbe:
+          {{- toYaml .Values.readinessProbe | nindent 10 }}
+
+        resources:
+          {{- toYaml .Values.resources | nindent 10 }}
+
+  strategy:
+    blueGreen:
+      activeService: {{ include "devops-chart.fullname" . }}
+      previewService: {{ include "devops-chart.fullname" . }}-preview
+      autoPromotionEnabled: {{ .Values.rollout.bluegreen.autoPromotionEnabled | default false }}
+      {{- if .Values.rollout.bluegreen.autoPromotionSeconds }}
+      autoPromotionSeconds: {{ .Values.rollout.bluegreen.autoPromotionSeconds }}
+      {{- end }}
+{{- end }}
+
