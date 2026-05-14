@@ -15,6 +15,20 @@ npx wrangler dev
 npx wrangler deploy
 ```
 
+### Live Deployment
+
+Your Worker is deployed and accessible at:
+**https://edge-api.poeticlama.workers.dev**
+
+### Available Endpoints
+
+- `GET /` - App metadata
+- `GET /health` - Health check
+- `GET /edge` - Edge location and metadata
+- `GET /counter` - Get and increment visit counter
+- `POST /counter` - Reset counter to 0
+- `GET /info` - Deployment information
+
 ## Configuration
 
 Create secrets:

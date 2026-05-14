@@ -62,9 +62,11 @@
 
 ### Deployment
 - Deploy with `npx wrangler deploy`
-- Public URL: `https://edge-api.<your-subdomain>.workers.dev`
-- Accessed via workers.dev automatically assigned URL
+- ✅ **Public URL**: `https://edge-api.poeticlama.workers.dev`
+- Accessed via workers.dev automatically assigned subdomain `poeticlama`
 - All routes functional on deployed Worker
+- Deployment completed: May 14, 2026
+- Status: Live and operational across Cloudflare global network
 
 ### Source Control
 - Project committed to Git with clean history
